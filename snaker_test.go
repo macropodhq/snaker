@@ -1,70 +1,84 @@
 package snaker
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-var _ = Describe("Snaker", func() {
-	Describe("CamelToSnake test", func() {
-		It("should work with one word", func() {
-			Expect(CamelToSnake("One")).To(Equal("one"))
-		})
+var content = [][3]string{
+	{"one", "One", "one"},
+	{"o_n_e", "ONE", "oNE"},
+	{"id", "ID", "id"},
+	{"i", "I", "i"},
+	{"this_has_to_be_converted_correctly_id", "ThisHasToBeConvertedCorrectlyID", "thisHasToBeConvertedCorrectlyID"},
+	{"this_id_is_fine", "ThisIDIsFine", "thisIDIsFine"},
+	{"this_https_connection", "ThisHTTPSConnection", "thisHTTPSConnection"},
+	{"hello_https_connection_id", "HelloHTTPSConnectionID", "helloHTTPSConnectionID"},
+	{"https_id", "HTTPSID", "httpsID"},
+	{"project_id", "ProjectID", "projectID"},
+}
 
-		It("should return an uppercase string as seperate words", func() {
-			Expect(CamelToSnake("ONE")).To(Equal("o_n_e"))
-		})
+var functions = []struct {
+	n string
+	f func(string) string
+}{
+	{"Snake", ToSnake},
+	{"UpperCamel", ToUpperCamel},
+	{"LowerCamel", ToLowerCamel},
+}
 
-		It("should return ID as lowercase", func() {
-			Expect(CamelToSnake("ID")).To(Equal("id"))
-		})
+func TestToSnake(t *testing.T) {
+	a := assert.New(t)
 
-		It("should work with a single lowercase character", func() {
-			Expect(CamelToSnake("i")).To(Equal("i"))
-		})
+	a.Equal("one", ToSnake("One"), "should work with one word")
+	a.Equal("o_n_e", ToSnake("ONE"), "should return an uppercase string as seperate words")
+	a.Equal("id", ToSnake("ID"), "should return ID as lowercase")
+	a.Equal("i", ToSnake("i"), "should work with a single lowercase character")
+	a.Equal("i", ToSnake("I"), "should work with a single uppcase character")
+	a.Equal("this_has_to_be_converted_correctly_id", ToSnake("ThisHasToBeConvertedCorrectlyID"), "should return a long text as expected")
+	a.Equal("this_id_is_fine", ToSnake("ThisIDIsFine"), "should return the text as expected if the initialism is in the middle")
+	a.Equal("this_https_connection", ToSnake("ThisHTTPSConnection"), "should work with long initialism")
+	a.Equal("hello_https_connection_id", ToSnake("HelloHTTPSConnectionID"), "should work with multi initialisms")
+	a.Equal("https_id", ToSnake("HTTPSID"), "sould work with concat initialisms")
+}
 
-		It("should work with a single uppcase character", func() {
-			Expect(CamelToSnake("I")).To(Equal("i"))
-		})
+func TestToUpperCamel(t *testing.T) {
+	a := assert.New(t)
 
-		It("should return a long text as expected", func() {
-			Expect(CamelToSnake("ThisHasToBeConvertedCorrectlyID")).To(
-				Equal("this_has_to_be_converted_correctly_id"))
-		})
+	a.Equal("ThisHasToBeUppercased", ToUpperCamel("this_has_to_be_uppercased"), "should return a snaked text as camel case")
+	a.Equal("ThisIsAnID", ToUpperCamel("this_is_an_id"), "should return a snaked text as camel case, except the word ID")
+	a.Equal("ThisIsAnIdentifier", ToUpperCamel("this_is_an_identifier"), "should return 'id' not as uppercase")
+	a.Equal("ID", ToUpperCamel("id"), "should simply work with id")
+}
 
-		It("should return the text as expected if the initialism is in the middle", func() {
-			Expect(CamelToSnake("ThisIDIsFine")).To(Equal("this_id_is_fine"))
-		})
+func TestToLowerCamel(t *testing.T) {
+	a := assert.New(t)
 
-		It("should work with long initialism", func() {
-			Expect(CamelToSnake("ThisHTTPSConnection")).To(Equal("this_https_connection"))
-		})
+	a.Equal("thisHasToBeUppercased", ToLowerCamel("this_has_to_be_uppercased"), "should return a snaked text as camel case")
+	a.Equal("thisIsAnID", ToLowerCamel("this_is_an_id"), "should return a snaked text as camel case, except the word ID")
+	a.Equal("thisIsAnIdentifier", ToLowerCamel("this_is_an_identifier"), "should return 'id' not as uppercase")
+	a.Equal("id", ToLowerCamel("id"), "should simply work with id")
+}
 
-		It("should work with multi initialisms", func() {
-			Expect(CamelToSnake("HelloHTTPSConnectionID")).To(Equal("hello_https_connection_id"))
-		})
+func TestRoundTrips(t *testing.T) {
+	a := assert.New(t)
 
-		It("sould work with concat initialisms", func() {
-			Expect(CamelToSnake("HTTPSID")).To(Equal("https_id"))
-		})
-	})
+	for _, s := range content {
+		for i := range functions {
+			f0, f1, f2 := functions[i], functions[(i+1)%3], functions[(i+2)%3]
 
-	Describe("SnakeToCamel test", func() {
-		It("should return a snaked text as camel case", func() {
-			Expect(SnakeToCamel("this_has_to_be_uppercased")).To(
-				Equal("ThisHasToBeUppercased"))
-		})
+			a.Equal(s[i], f0.f(s[i]), f0.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(s[(i+2)%3]), f1.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(s[(i+3)%3]), f2.n+" -> "+f0.n)
 
-		It("should return a snaked text as camel case, except the word ID", func() {
-			Expect(SnakeToCamel("this_is_an_id")).To(Equal("ThisIsAnID"))
-		})
+			a.Equal(s[i], f0.f(f1.f(s[i])), f0.n+" -> "+f1.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(f1.f(s[(i+2)%3])), f1.n+" -> "+f1.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(f1.f(s[(i+3)%3])), f2.n+" -> "+f1.n+" -> "+f0.n)
 
-		It("should return 'id' not as uppercase", func() {
-			Expect(SnakeToCamel("this_is_an_identifier")).To(Equal("ThisIsAnIdentifier"))
-		})
-
-		It("should simply work with id", func() {
-			Expect(SnakeToCamel("id")).To(Equal("ID"))
-		})
-	})
-})
+			a.Equal(s[i], f0.f(f1.f(f2.f(s[i]))), f0.n+" -> "+f2.n+" -> "+f1.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(f1.f(f2.f(s[(i+2)%3]))), f1.n+" -> "+f2.n+" -> "+f1.n+" -> "+f0.n)
+			a.Equal(s[i], f0.f(f1.f(f2.f(s[(i+3)%3]))), f2.n+" -> "+f2.n+" -> "+f1.n+" -> "+f0.n)
+		}
+	}
+}

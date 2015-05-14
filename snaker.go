@@ -7,9 +7,15 @@ import (
 	"unicode"
 )
 
-// CamelToSnake converts a given string to snake case
-func CamelToSnake(s string) string {
-	var result string
+func Split(s string) []string {
+	if strings.Contains(s, "_") {
+		return SplitSnake(s)
+	} else {
+		return SplitCamel(s)
+	}
+}
+
+func SplitCamel(s string) []string {
 	var words []string
 	var lastPos int
 	rs := []rune(s)
@@ -34,32 +40,62 @@ func CamelToSnake(s string) string {
 		words = append(words, s[lastPos:])
 	}
 
-	for k, word := range words {
-		if k > 0 {
-			result += "_"
+	return words
+}
+
+func SplitSnake(s string) []string {
+	return strings.Split(s, "_")
+}
+
+func ToCamel(s string, lower bool) string {
+	var result string
+
+	words := Split(s)
+
+	for i, word := range words {
+		if upper := strings.ToUpper(word); commonInitialisms[upper] {
+			if lower && i == 0 {
+				upper = strings.ToLower(upper)
+			}
+
+			result += upper
+
+			continue
 		}
 
-		result += strings.ToLower(word)
+		if lower && i == 0 {
+			word = strings.ToLower(word)
+		} else {
+			w := []rune(word)
+			w[0] = unicode.ToUpper(w[0])
+			word = string(w)
+		}
+
+		result += word
 	}
 
 	return result
 }
 
-// SnakeToCamel returns a string converted from snake case to uppercase
-func SnakeToCamel(s string) string {
+func ToLowerCamel(s string) string {
+	return ToCamel(s, true)
+}
+
+func ToUpperCamel(s string) string {
+	return ToCamel(s, false)
+}
+
+func ToSnake(s string) string {
 	var result string
 
-	words := strings.Split(s, "_")
+	words := Split(s)
 
-	for _, word := range words {
-		if upper := strings.ToUpper(word); commonInitialisms[upper] {
-			result += upper
-			continue
+	for i, word := range words {
+		if i > 0 {
+			result += "_"
 		}
 
-		w := []rune(word)
-		w[0] = unicode.ToUpper(w[0])
-		result += string(w)
+		result += strings.ToLower(word)
 	}
 
 	return result
